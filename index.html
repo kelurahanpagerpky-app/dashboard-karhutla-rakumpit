@@ -1357,7 +1357,38 @@
             "Peta Standar (OpenStreetMap)": osmLayer,
             "Peta Satelit (ESRI World Imagery)": satelliteLayer
         };
-        L.control.layers(baseMaps).addTo(map);
+        // ===== [MULAI] Citra Satelit Harian NASA GIBS (VIIRS True Color) =====
+        // Untuk menonaktifkan fitur ini: ubah ENABLE_VIIRS menjadi false (atau pakai index.original.html).
+        var ENABLE_VIIRS = true;
+        var overlayMaps = {};
+        if (ENABLE_VIIRS) {
+            var viirsDate = function (daysAgo) { return new Date(Date.now() - daysAgo * 86400000).toISOString().slice(0, 10); };
+            var viirsUrl = function (d) { return 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/' + d + '/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg'; };
+            var viirsLayer = L.tileLayer(viirsUrl(viirsDate(1)), { maxNativeZoom: 9, maxZoom: 18, opacity: 0.9, zIndex: 3, crossOrigin: true, attribution: 'VIIRS/Suomi NPP true color &copy; NASA GIBS' });
+            overlayMaps["Citra Satelit Harian (VIIRS True Color, NASA)"] = viirsLayer;
+
+            // Kontrol tanggal kecil: muncul hanya saat layer VIIRS aktif
+            var viirsCtl = L.control({ position: 'topright' });
+            viirsCtl.onAdd = function () {
+                var div = L.DomUtil.create('div');
+                L.DomEvent.disableClickPropagation(div);
+                div.style.cssText = 'background:rgba(255,255,255,.95);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.25);padding:6px 10px;font:11px/1.5 system-ui,sans-serif;color:#1e293b;margin-top:6px';
+                div.innerHTML = '<b>Citra VIIRS</b><br><input type="date" id="viirs-date" style="font-size:11px;border:1px solid #cbd5e1;border-radius:6px;padding:2px 4px" max="' + viirsDate(0) + '" value="' + viirsDate(1) + '">' +
+                    '<div style="margin-top:4px"><button type="button" id="viirs-today" style="font-size:11px;border:1px solid #cbd5e1;border-radius:6px;padding:1px 6px;margin-right:4px">Hari ini</button><button type="button" id="viirs-yest" style="font-size:11px;border:1px solid #cbd5e1;border-radius:6px;padding:1px 6px">Kemarin</button></div>' +
+                    '<div style="color:#64748b;margin-top:4px;max-width:170px">1 citra per hari. Area kosong/hitam = belum ada lintasan satelit; pilih Kemarin.</div>';
+                var setD = function (d) { document.getElementById('viirs-date').value = d; viirsLayer.setUrl(viirsUrl(d)); };
+                setTimeout(function () {
+                    document.getElementById('viirs-date').addEventListener('change', function (e) { if (e.target.value) setD(e.target.value); });
+                    document.getElementById('viirs-today').addEventListener('click', function () { setD(viirsDate(0)); });
+                    document.getElementById('viirs-yest').addEventListener('click', function () { setD(viirsDate(1)); });
+                }, 0);
+                return div;
+            };
+            map.on('overlayadd', function (e) { if (e.layer === viirsLayer) viirsCtl.addTo(map); });
+            map.on('overlayremove', function (e) { if (e.layer === viirsLayer) map.removeControl(viirsCtl); });
+        }
+        // ===== [SELESAI] Citra Satelit Harian =====
+        L.control.layers(baseMaps, overlayMaps).addTo(map);
 
         // Legenda warna: titik panas, laporan manual, dan wilayah kelurahan
         var legend = L.control({ position: 'bottomleft' });
