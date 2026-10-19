@@ -1,0 +1,23 @@
+{
+  "name": "Dashboard Terpadu Karhutla Kecamatan Rakumpit",
+  "short_name": "Karhutla Rakumpit",
+  "description": "Pemantauan titik panas (hotspot) multi-satelit, cuaca, ISPU, dan laporan kegiatan karhutla di Kecamatan Rakumpit.",
+  "id": "./",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b2b1c",
+  "theme_color": "#12402a",
+  "lang": "id",
+  "categories": ["utilities", "weather", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Peta Hotspot", "short_name": "Peta", "url": "./?source=pwa#peta-section", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Daftar Hotspot", "short_name": "Daftar", "url": "./?source=pwa#daftar-hotspot", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
