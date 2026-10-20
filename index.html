@@ -568,6 +568,19 @@
         @keyframes rk-out { to { opacity:0; transform:translateX(16px); } }
 
         /* ================= ANALISIS, PRAKIRAAN, ESTIMASI LUAS ================= */
+        .ix-arsip-tools { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+        .ix-date { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:.6rem; padding:.35rem .6rem; font-size:.78rem; }
+        .ix-btn { border:1px solid var(--line); background:var(--card2); color:var(--ink); border-radius:.6rem; padding:.35rem .75rem; font-size:.74rem; font-weight:700; cursor:pointer; }
+        .ix-btn:hover:not(:disabled) { border-color:var(--f700); }
+        .ix-btn:disabled { opacity:.45; cursor:default; }
+        .ix-btn.on { background:var(--f700); color:#fff; border-color:var(--f700); }
+        .ix-arsip-table { width:100%; border-collapse:collapse; font-size:.76rem; }
+        .ix-arsip-table th { text-align:left; font-weight:800; color:var(--mut); padding:.5rem .6rem; border-bottom:2px solid var(--line); white-space:nowrap; }
+        .ix-arsip-table td { padding:.55rem .6rem; border-bottom:1px solid var(--line); vertical-align:middle; }
+        .ix-arsip-table a { font-weight:800; color:var(--f700); margin-right:.7rem; white-space:nowrap; text-decoration:none; }
+        .ix-arsip-table a:hover { text-decoration:underline; }
+        html.dark .ix-arsip-table a { color:var(--gold); }
+        .ix-pager { display:flex; gap:.35rem; align-items:center; justify-content:center; flex-wrap:wrap; }
         .ix-head { display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap; }
         .ix-title { display:flex; align-items:center; gap:.6rem; font-weight:800; font-size:1rem; color:var(--ink); }
         .ix-title .ico { width:36px; height:36px; border-radius:11px; display:grid; place-items:center; background:rgba(16,185,129,.12); color:var(--f700); }
@@ -1054,12 +1067,38 @@
             <div class="ix-head">
                 <div>
                     <div class="ix-title"><span class="ico"><i data-lucide="file-text"></i></span>Arsip Laporan Harian (PDF)</div>
-                    <p class="ix-sub">Dibuat otomatis tiap malam (sekitar pukul 23.30 WIB) dan disimpan di Google Drive. Isi: statistik, estimasi luas, cuaca &amp; ISPU, prakiraan 7 hari, analisis rawan, laporan kegiatan, dan rekomendasi.</p>
+                    <p class="ix-sub">Dibuat otomatis setiap hari sekitar pukul 23.30 WIB dan disimpan di Google Drive. Untuk laporan sore (mis. pukul 17.00 WIB), tekan tombol <b>Cetak PDF Hari Ini</b>. Tabel menampilkan 7 laporan per halaman; gunakan pencarian tanggal untuk melihat atau mencetak laporan hari tertentu. Isi: statistik, estimasi luas, cuaca &amp; ISPU, prakiraan 7 hari, analisis rawan, laporan kegiatan, dan rekomendasi.</p>
                 </div>
+                <button type="button" id="pdf-now-btn" class="ix-btn on" style="display:inline-flex;align-items:center;gap:.4rem"><i data-lucide="printer"></i><span>Cetak PDF Hari Ini</span></button>
             </div>
-            <div id="arsip-list" class="space-y-2"></div>
+            <div class="ix-arsip-tools">
+                <label class="ix-note" for="arsip-date" style="font-weight:700">Cari tanggal laporan</label>
+                <input type="date" id="arsip-date" class="ix-date" aria-label="Cari tanggal laporan PDF">
+                <button type="button" id="arsip-clear" class="ix-btn">Tampilkan semua</button>
+                <span class="ix-note" id="arsip-count" style="margin-left:auto"></span>
+            </div>
+            <div style="overflow-x:auto">
+                <table class="ix-arsip-table">
+                    <thead><tr><th>Tanggal</th><th>Nama file</th><th>Jenis</th><th>Ukuran</th><th>Status</th><th>Aksi</th></tr></thead>
+                    <tbody id="arsip-list"></tbody>
+                </table>
+            </div>
+            <div class="ix-pager" id="arsip-pager"></div>
             <p class="ix-note" id="arsip-note"></p>
         </section>
+
+        <!-- Dialog kode admin untuk Cetak PDF Hari Ini -->
+        <div id="pdf-now-modal" role="dialog" aria-modal="true" aria-labelledby="pdf-now-title" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.55);align-items:center;justify-content:center;padding:1rem">
+            <form id="pdf-now-form" autocomplete="off" style="background:var(--card,#fff);color:inherit;border-radius:1rem;padding:1.25rem;max-width:22rem;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3)">
+                <div id="pdf-now-title" style="font-weight:800;margin-bottom:.4rem">Cetak PDF Hari Ini</div>
+                <p class="ix-note" style="margin-bottom:.7rem">Masukkan kode admin (sama dengan kode admin Sumber Air) untuk membuat laporan PDF hari ini. Proses sekitar 30–90 detik.</p>
+                <input type="password" id="pdf-now-code" class="ix-date" style="width:100%" placeholder="Kode admin" aria-label="Kode admin" required minlength="6" maxlength="60">
+                <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.8rem">
+                    <button type="button" id="pdf-now-cancel" class="ix-btn">Batal</button>
+                    <button type="submit" id="pdf-now-ok" class="ix-btn on">Buat PDF</button>
+                </div>
+            </form>
+        </div>
 
         <!-- Sumber Data (paling bawah) -->
         <section id="sumber-data" class="space-y-5">
@@ -1344,7 +1383,7 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     
     <script>
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxGZjrHtg0HPMWsQ2xXvNBTZdjyu2GDOLdBFROOe1LaUODUz0Ttb_oaMdAQ5fo2r15a/exec"; 
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzF7GFRaAuz_4_7D00HAjGZqWEI_nV95e_Hj5BQ2Xj-3U74IAhc96kDpcL-mYJ5fIbp/exec"; 
 
         // ================= SISTEM LOADING, NOTIFIKASI & PENANGANAN ERROR =================
         const Loader = (function () {
@@ -1552,12 +1591,63 @@
             document.getElementById('luas-metode').textContent = 'Luas (ha) = FRP (MW) × ' + p.jamBakar + ' jam × 3600 × ' + p.kgPerMJ + ' kg/MJ (Wooster dkk., 2005) ÷ konsumsi bahan bakar (' + p.bahanBakar.min + ' / ' + p.bahanBakar.est + ' / ' + p.bahanBakar.max + ' kg/m² untuk batas bawah / estimasi / batas atas) ÷ 10.000.';
         }
 
+        const ARSIP_PER_PAGE = 7;
+        let arsipPage_ = 1, arsipDate_ = '', arsipBound_ = false;
+        function bindArsip_() {
+            if (arsipBound_) return; arsipBound_ = true;
+            const d = document.getElementById('arsip-date'), c = document.getElementById('arsip-clear'), pg = document.getElementById('arsip-pager');
+            d.addEventListener('change', () => { arsipDate_ = /^\d{4}-\d{2}-\d{2}$/.test(d.value) ? d.value : ''; arsipPage_ = 1; renderArsip_(); });
+            c.addEventListener('click', () => { d.value = ''; arsipDate_ = ''; arsipPage_ = 1; renderArsip_(); });
+            pg.addEventListener('click', ev => { const b = ev.target.closest('button[data-p]'); if (!b || b.disabled) return; arsipPage_ = parseInt(b.dataset.p, 10) || 1; renderArsip_(); });
+        }
         function renderArsip_() {
-            const list = document.getElementById('arsip-list'), note = document.getElementById('arsip-note'); if (!list) return;
-            const items = (globalArsip || []).filter(a => safeUrl_(a.url));
-            if (!items.length) { list.innerHTML = ixEmpty_('Belum ada laporan harian tersimpan. Laporan pertama dibuat otomatis pada jadwal malam berikutnya (atau jalankan ujiLaporanHarian di Apps Script).'); note.textContent = ''; return; }
-            list.innerHTML = items.map(a => `<div class="ix-pdf"><i data-lucide="file-text" class="w-5 h-5" style="color:#dc2626"></i><div style="min-width:0"><div class="text-xs font-extrabold">${esc(a.tanggal ? fmtDateId_(a.tanggal) : a.nama)}</div><div class="ix-note">${esc(a.nama)} · ${esc(a.ukuranKB)} KB${a.status && a.status !== 'LENGKAP' ? ' · ' + esc(a.status) : ''}</div></div><a href="${esc(safeUrl_(a.url))}" target="_blank" rel="noopener noreferrer">Buka / Unduh</a></div>`).join('');
-            note.textContent = items.some(a => !a.publik) ? 'Tautan PDF bersifat pribadi: hanya dapat dibuka oleh akun Google pemilik Drive. Ubah CONFIG.PDF.PUBLIC_LINK = true di CODE.gs bila ingin dapat dibuka siapa saja yang punya tautan.' : '';
+            const list = document.getElementById('arsip-list'), note = document.getElementById('arsip-note'), pager = document.getElementById('arsip-pager'), count = document.getElementById('arsip-count');
+            if (!list) return; bindArsip_(); bindPdfNow_();
+            const all = (globalArsip || []).filter(a => safeUrl_(a.url)).sort((x, y) => (x.tanggal < y.tanggal ? 1 : -1));
+            const items = arsipDate_ ? all.filter(a => a.tanggal === arsipDate_) : all;
+            const pages = Math.max(1, Math.ceil(items.length / ARSIP_PER_PAGE));
+            if (arsipPage_ > pages) arsipPage_ = pages;
+            const rows = items.slice((arsipPage_ - 1) * ARSIP_PER_PAGE, arsipPage_ * ARSIP_PER_PAGE);
+            count.textContent = items.length + ' laporan' + (arsipDate_ ? ' pada ' + fmtDateId_(arsipDate_) : '');
+            if (!rows.length) {
+                list.innerHTML = '<tr><td colspan="6" class="ix-note" style="padding:1rem;text-align:center">' + esc(arsipDate_ ? 'Tidak ada laporan PDF pada tanggal tersebut. Laporan otomatis dibuat sekitar pukul 23.30 WIB; tanggal sebelum fitur ini aktif tidak memiliki arsip.' : 'Belum ada laporan harian tersimpan. Laporan otomatis pertama dibuat sekitar pukul 23.30 WIB, atau tekan Cetak PDF Hari Ini.') + '</td></tr>';
+                pager.innerHTML = ''; note.textContent = ''; return;
+            }
+            list.innerHTML = rows.map(a => {
+                const u = esc(safeUrl_(a.url));
+                return `<tr><td style="font-weight:800;white-space:nowrap">${esc(a.tanggal ? fmtDateId_(a.tanggal) : '-')}</td><td style="word-break:break-all">${esc(a.nama)}</td><td style="white-space:nowrap">${esc(a.jenis || 'Otomatis')}</td><td style="white-space:nowrap">${esc(a.ukuranKB)} KB</td><td>${esc(a.status || '-')}</td><td><a href="${u}" target="_blank" rel="noopener noreferrer">Buka / Cetak</a><a href="${u}" target="_blank" rel="noopener noreferrer" download>Unduh</a></td></tr>`;
+            }).join('');
+            let ph = `<button type="button" class="ix-btn" data-p="${arsipPage_ - 1}" ${arsipPage_ <= 1 ? 'disabled' : ''}>‹ Sebelumnya</button>`;
+            for (let i = 1; i <= pages; i++) if (pages <= 7 || i === 1 || i === pages || Math.abs(i - arsipPage_) <= 1) ph += `<button type="button" class="ix-btn${i === arsipPage_ ? ' on' : ''}" data-p="${i}">${i}</button>`; else if (Math.abs(i - arsipPage_) === 2) ph += '<span class="ix-note">…</span>';
+            ph += `<button type="button" class="ix-btn" data-p="${arsipPage_ + 1}" ${arsipPage_ >= pages ? 'disabled' : ''}>Berikutnya ›</button>`;
+            pager.innerHTML = pages > 1 ? ph : '';
+            note.textContent = all.some(a => !a.publik) ? 'Tautan PDF bersifat pribadi: hanya dapat dibuka oleh akun Google pemilik Drive. Ubah CONFIG.PDF.PUBLIC_LINK = true di CODE.gs bila ingin dapat dibuka siapa saja yang punya tautan. Untuk mencetak, buka PDF lalu tekan Ctrl+P.' : 'Untuk mencetak, buka PDF lalu tekan Ctrl+P.';
+        }
+
+        // ---- Tombol "Cetak PDF Hari Ini" (laporan sore, dilindungi kode admin) ----
+        let pdfNowBound_ = false, pdfNowBusy_ = false;
+        function bindPdfNow_() {
+            if (pdfNowBound_) return; pdfNowBound_ = true;
+            const btn = document.getElementById('pdf-now-btn'), modal = document.getElementById('pdf-now-modal'), form = document.getElementById('pdf-now-form'), code = document.getElementById('pdf-now-code');
+            if (!btn || !modal) return;
+            const close = () => { modal.style.display = 'none'; code.value = ''; };
+            btn.addEventListener('click', () => { if (pdfNowBusy_) return; modal.style.display = 'flex'; setTimeout(() => code.focus(), 50); });
+            document.getElementById('pdf-now-cancel').addEventListener('click', close);
+            modal.addEventListener('click', ev => { if (ev.target === modal) close(); });
+            document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && modal.style.display !== 'none') close(); });
+            form.addEventListener('submit', async ev => {
+                ev.preventDefault();
+                const kode = code.value.trim(); if (kode.length < 6 || pdfNowBusy_) return;
+                pdfNowBusy_ = true; close(); btn.disabled = true;
+                Loader.show('Menyusun laporan PDF hari ini dan menyimpannya ke Google Drive...');
+                try {
+                    const res = await apiFetch_(GAS_API_URL, { method: 'POST', body: JSON.stringify({ action: 'cetakPdfHariIni', kode }), timeout: 180000 });
+                    if (res.item && safeUrl_(res.item.url)) { globalArsip = [res.item].concat((globalArsip || []).filter(a => a.url !== res.item.url)); arsipPage_ = 1; arsipDate_ = ''; const d = document.getElementById('arsip-date'); if (d) d.value = ''; renderArsip_(); refreshIcons_(); }
+                    const u = res.item && safeUrl_(res.item.url);
+                    Notify.success('Laporan PDF hari ini tersimpan di Google Drive.' + ((res.errors && res.errors.length) ? ' Sebagian bagian gagal dibuat (' + res.errors.length + ').' : ''), 'PDF siap', u ? { actions: [{ label: 'Buka PDF', fn: () => window.open(u, '_blank', 'noopener,noreferrer') }] } : {});
+                } catch (err) { Notify.error(friendlyError_(err), 'Gagal membuat PDF'); }
+                finally { Loader.hide(); pdfNowBusy_ = false; btn.disabled = false; }
+            });
         }
 
         function renderInsightSections_() {
