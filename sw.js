@@ -1,6 +1,6 @@
 /* Service Worker - Dashboard Terpadu Karhutla Rakumpit
    Naikkan VERSION setiap kali index.html / aset berubah agar cache lama dibersihkan. */
-const VERSION = 'v2.0.4';
+const VERSION = 'v2.0.5';
 const SHELL_CACHE = 'karhutla-shell-' + VERSION;
 const LIB_CACHE = 'karhutla-lib-' + VERSION;
 const TILE_CACHE = 'karhutla-tiles-v1';
