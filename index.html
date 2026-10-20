@@ -1087,18 +1087,6 @@
             <p class="ix-note" id="arsip-note"></p>
         </section>
 
-        <!-- Dialog kode admin untuk Cetak PDF Hari Ini -->
-        <div id="pdf-now-modal" role="dialog" aria-modal="true" aria-labelledby="pdf-now-title" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(15,23,42,.55);align-items:center;justify-content:center;padding:1rem">
-            <form id="pdf-now-form" autocomplete="off" style="background:var(--card,#fff);color:inherit;border-radius:1rem;padding:1.25rem;max-width:22rem;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3)">
-                <div id="pdf-now-title" style="font-weight:800;margin-bottom:.4rem">Cetak PDF Hari Ini</div>
-                <p class="ix-note" style="margin-bottom:.7rem">Masukkan kode admin (sama dengan kode admin Sumber Air) untuk membuat laporan PDF hari ini. Proses sekitar 30–90 detik.</p>
-                <input type="password" id="pdf-now-code" class="ix-date" style="width:100%" placeholder="Kode admin" aria-label="Kode admin" required minlength="6" maxlength="60">
-                <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.8rem">
-                    <button type="button" id="pdf-now-cancel" class="ix-btn">Batal</button>
-                    <button type="submit" id="pdf-now-ok" class="ix-btn on">Buat PDF</button>
-                </div>
-            </form>
-        </div>
 
         <!-- Sumber Data (paling bawah) -->
         <section id="sumber-data" class="space-y-5">
@@ -1624,26 +1612,20 @@
             note.textContent = all.some(a => !a.publik) ? 'Tautan PDF bersifat pribadi: hanya dapat dibuka oleh akun Google pemilik Drive. Ubah CONFIG.PDF.PUBLIC_LINK = true di CODE.gs bila ingin dapat dibuka siapa saja yang punya tautan. Untuk mencetak, buka PDF lalu tekan Ctrl+P.' : 'Untuk mencetak, buka PDF lalu tekan Ctrl+P.';
         }
 
-        // ---- Tombol "Cetak PDF Hari Ini" (laporan sore, dilindungi kode admin) ----
+        // ---- Tombol "Cetak PDF Hari Ini" (tanpa kata sandi; server membatasi frekuensi) ----
         let pdfNowBound_ = false, pdfNowBusy_ = false;
         function bindPdfNow_() {
             if (pdfNowBound_) return; pdfNowBound_ = true;
-            const btn = document.getElementById('pdf-now-btn'), modal = document.getElementById('pdf-now-modal'), form = document.getElementById('pdf-now-form'), code = document.getElementById('pdf-now-code');
-            if (!btn || !modal) return;
-            const close = () => { modal.style.display = 'none'; code.value = ''; };
-            btn.addEventListener('click', () => { if (pdfNowBusy_) return; modal.style.display = 'flex'; setTimeout(() => code.focus(), 50); });
-            document.getElementById('pdf-now-cancel').addEventListener('click', close);
-            modal.addEventListener('click', ev => { if (ev.target === modal) close(); });
-            document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && modal.style.display !== 'none') close(); });
-            form.addEventListener('submit', async ev => {
-                ev.preventDefault();
-                const kode = code.value.trim(); if (kode.length < 6 || pdfNowBusy_) return;
-                pdfNowBusy_ = true; close(); btn.disabled = true;
-                Loader.show('Menyusun laporan PDF hari ini dan menyimpannya ke Google Drive...');
+            const btn = document.getElementById('pdf-now-btn');
+            if (!btn) return;
+            btn.addEventListener('click', async () => {
+                if (pdfNowBusy_) return;
+                pdfNowBusy_ = true; btn.disabled = true;
+                Loader.show('Menyusun laporan PDF hari ini dan menyimpannya ke Google Drive (30–90 detik)...');
                 try {
-                    const res = await apiFetch_(GAS_API_URL, { method: 'POST', body: JSON.stringify({ action: 'cetakPdfHariIni', kode }), timeout: 180000 });
-                    if (res.item && safeUrl_(res.item.url)) { globalArsip = [res.item].concat((globalArsip || []).filter(a => a.url !== res.item.url)); arsipPage_ = 1; arsipDate_ = ''; const d = document.getElementById('arsip-date'); if (d) d.value = ''; renderArsip_(); refreshIcons_(); }
+                    const res = await apiFetch_(GAS_API_URL, { method: 'POST', body: JSON.stringify({ action: 'cetakPdfHariIni' }), timeout: 180000 });
                     const u = res.item && safeUrl_(res.item.url);
+                    if (u) { globalArsip = [res.item].concat((globalArsip || []).filter(a => a.url !== res.item.url)); arsipPage_ = 1; arsipDate_ = ''; const d = document.getElementById('arsip-date'); if (d) d.value = ''; renderArsip_(); refreshIcons_(); }
                     Notify.success('Laporan PDF hari ini tersimpan di Google Drive.' + ((res.errors && res.errors.length) ? ' Sebagian bagian gagal dibuat (' + res.errors.length + ').' : ''), 'PDF siap', u ? { actions: [{ label: 'Buka PDF', fn: () => window.open(u, '_blank', 'noopener,noreferrer') }] } : {});
                 } catch (err) { Notify.error(friendlyError_(err), 'Gagal membuat PDF'); }
                 finally { Loader.hide(); pdfNowBusy_ = false; btn.disabled = false; }
